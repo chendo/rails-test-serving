@@ -13,7 +13,7 @@ Tired of waitings 10 seconds before your tests run?
 3.  Run tests as you usually do:
       ruby test/unit/account_test.rb
       ruby test/unit/account_test.rb -n /balance/
-    As a consequence, they work in RubyMate too (⌘ + R in TextMate).
+    As a consequence, they work in RubyMate too (⌘R in TextMate).
 
 == Notes
 
@@ -22,5 +22,5 @@ Tired of waitings 10 seconds before your tests run?
 
 == Caveats
 
-There exists some quirks: search for "TODO" in the source. I can bear them but
-contributions are welcome!
+There might exist some quirks: search for "TODO" in the source. I can bear them
+but contributions are welcome!

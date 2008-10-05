@@ -1,9 +1,8 @@
-require 'drb'
+require 'drb/unix'
 require 'test/unit'
 
 module RailsTestServing
-  # TODO compute a unique port number based on the project's directory name
-  SERVICE_URI = "druby://127.0.0.1:65432"
+  SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
   
   def self.boot
     if ARGV.delete('--serve')
