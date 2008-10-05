@@ -13,11 +13,9 @@ Tired of waitings 10 seconds before your tests run?
 3.  Run tests as you usually do:
       ruby test/unit/account_test.rb
       ruby test/unit/account_test.rb -n /balance/
-    Or from within rake tasks:
-      rake test
-    As a consequence, they work from RubyMate too (⌘ + R in TextMate).
+    As a consequence, they work in RubyMate too (⌘ + R in TextMate).
 
-== Note
+== Notes
 
 * The first run will be slow as Rails is loading. Subsequent runs will be fast.
 * If the server is not started, tests fall back to running the usual way.
