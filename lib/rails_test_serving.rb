@@ -1,5 +1,6 @@
-require 'drb/unix'
 require 'test/unit'
+require 'drb/unix'
+require 'stringio'
 
 module RailsTestServing
   SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
@@ -82,8 +83,6 @@ module RailsTestServing
     end
     
     def run(file, argv)
-      require 'stringio'
-      
       check_cleaner_health
       sleep 0.01 until @cleaner.stop?
       
@@ -126,12 +125,6 @@ module RailsTestServing
       end
     end
     
-    def reload_app
-      dispatcher = ActionController::Dispatcher.new($stdout)
-      dispatcher.cleanup_application
-      dispatcher.reload_application
-    end
-    
     def remove_tests
       TESTCASE_CLASS_NAMES.each do |name|
         next unless klass = eval("#{name} if defined? #{name}", TOPLEVEL_BINDING)
@@ -139,12 +132,18 @@ module RailsTestServing
       end
     end
     
+    def reload_app
+      dispatcher = ActionController::Dispatcher.new($stdout)
+      dispatcher.cleanup_application
+      dispatcher.reload_application
+    end
+    
     def with_default_testrunner_io(io)
       require 'test/unit/ui/console/testrunner'
       
       Test::Unit::UI::Console::TestRunner.class_eval do
         alias_method :old_initialize, :initialize
-        def initialize(suite, output_level=NORMAL, io=Thread.current["test_runner_io"])
+        def initialize(suite, output_level, io=Thread.current["test_runner_io"])
           old_initialize(suite, output_level, io)
         end
       end
@@ -166,12 +165,10 @@ module RailsTestServing
       require 'test/unit/collector/objectspace'
       
       Test::Unit::Collector::ObjectSpace.class_eval do
-        include ConstantManagement
-        
         alias_method :old_collect, :collect
         def collect(name)
           tests = []
-          subclasses_of(Test::Unit::TestCase, :legit => true).each { |klass| add_suite(tests, klass.suite) }
+          ConstantManagement.subclasses_of(Test::Unit::TestCase, :legit => true).each { |klass| add_suite(tests, klass.suite) }
           suite = Test::Unit::TestSuite.new(name)
           sort(tests).each { |t| suite << t }
           suite
