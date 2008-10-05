@@ -1,0 +1,28 @@
+Tired of waitings 10 seconds before your tests run?
+
+== Quick usage instructions
+
+1.  Insert the following lines at the very top of <tt>test/test_helper.rb</tt>:
+      require 'rails_test_serving'
+      RailsTestServing.boot
+
+2.  Start the server:
+      cd <project-dir>
+      ruby test/test_helper.rb --serve
+
+3.  Run tests as you usually do:
+      ruby test/unit/account_test.rb
+      ruby test/unit/account_test.rb -n /balance/
+    Or from within rake tasks:
+      rake test
+    As a consequence, they work from RubyMate too (⌘ + R in TextMate).
+
+== Note
+
+* The first run will be slow as Rails is loading. Subsequent runs will be fast.
+* If the server is not started, tests fall back to running the usual way.
+
+== Caveats
+
+There exists some quirks: search for "TODO" in the source. I can bear them but
+contributions are welcome!
