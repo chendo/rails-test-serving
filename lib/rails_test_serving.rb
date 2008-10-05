@@ -22,8 +22,8 @@ module RailsTestServing
     # ActiveSupport's Module#remove_class doesn't behave quite the way I would expect it to.
     def remove_constants(*names)
       names.each do |name|
-        parent, short = name.to_s =~ /^(.+)::(.+?)$/ ? [$1, $2] : ['Object', name]
-        eval(parent, TOPLEVEL_BINDING).module_eval { remove_const(short) if const_defined?(short) }
+        namespace, short = name.to_s =~ /^(.+)::(.+?)$/ ? [$1, $2] : ['Object', name]
+        eval(namespace, TOPLEVEL_BINDING).module_eval { remove_const(short) if const_defined?(short) }
       end
     end
     
