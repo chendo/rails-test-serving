@@ -84,7 +84,6 @@ module RailsTestServing
     
     def run(file, argv)
       require 'stringio'
-      require 'active_support'
       
       check_cleaner_health
       sleep 0.01 until @cleaner.stop?
