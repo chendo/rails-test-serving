@@ -17,14 +17,22 @@ module RailsTestServing
     extend self
     
     def legit?(const)
-      !const.to_s.empty? && eval("#{const} if defined? #{const}", TOPLEVEL_BINDING) == const
+      !const.to_s.empty? && constantize_safely(const) == const
+    end
+    
+    def constantize_safely(name)
+      eval("#{name} if defined? #{name}", TOPLEVEL_BINDING)
+    end
+    
+    def constantize(name)
+      name.to_s.split('::').inject(Object) { |namespace, short| namespace.const_get(short) }
     end
     
     # ActiveSupport's Module#remove_class doesn't behave quite the way I would expect it to.
     def remove_constants(*names)
       names.each do |name|
         namespace, short = name.to_s =~ /^(.+)::(.+?)$/ ? [$1, $2] : ['Object', name]
-        eval(namespace, TOPLEVEL_BINDING).module_eval { remove_const(short) if const_defined?(short) }
+        constantize(namespace).module_eval { remove_const(short) if const_defined?(short) }
       end
     end
     
@@ -127,7 +135,7 @@ module RailsTestServing
     
     def remove_tests
       TESTCASE_CLASS_NAMES.each do |name|
-        next unless klass = eval("#{name} if defined? #{name}", TOPLEVEL_BINDING)
+        next unless klass = constantize_safely(name)
         remove_constants(*subclasses_of(klass).map { |c| c.to_s }.grep(/Test$/) - TESTCASE_CLASS_NAMES)
       end
     end

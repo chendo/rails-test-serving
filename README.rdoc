@@ -22,5 +22,6 @@ Tired of waitings 10 seconds before your tests run?
 
 == Caveats
 
-There might exist some quirks: search for "TODO" in the source. I can bear them
-but contributions are welcome!
+* There might exist some quirks: search for "TODO" in the source. I can bear them
+  but contributions are welcome.
+* Unit tests need to be written.
