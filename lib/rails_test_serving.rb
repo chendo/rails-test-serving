@@ -17,14 +17,14 @@ module RailsTestServing
     extend self
     
     def legit?(const)
-      !const.to_s.empty? && constantize(const) == const
+      !const.to_s.empty? && constantize_safely(const) == const
     end
     
-    def constantize(name)
+    def constantize_safely(name)
       eval("#{name} if defined? #{name}", TOPLEVEL_BINDING)
     end
     
-    def constantize!(name)
+    def constantize(name)
       name.to_s.split('::').inject(Object) { |namespace, short| namespace.const_get(short) }
     end
     
@@ -32,7 +32,7 @@ module RailsTestServing
     def remove_constants(*names)
       names.each do |name|
         namespace, short = name.to_s =~ /^(.+)::(.+?)$/ ? [$1, $2] : ['Object', name]
-        constantize!(namespace).module_eval { remove_const(short) if const_defined?(short) }
+        constantize(namespace).module_eval { remove_const(short) if const_defined?(short) }
       end
     end
     
@@ -138,7 +138,7 @@ module RailsTestServing
     
     def remove_tests
       TESTCASE_CLASS_NAMES.each do |name|
-        next unless klass = constantize(name)
+        next unless klass = constantize_safely(name)
         remove_constants(*subclasses_of(klass).map { |c| c.to_s }.grep(/Test$/) - TESTCASE_CLASS_NAMES)
       end
     end
