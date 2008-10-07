@@ -51,14 +51,14 @@ module RailsTestServing
     end
     
     def disable
-      @disabled = true
+      @@disabled = true
       yield
     ensure
-      @disabled = false
+      @@disabled = false
     end
     
     def run_tests
-      return if @disabled
+      return if @@disabled
       Client.tests_on_exit = false
       server = DRbObject.new_with_uri(SERVICE_URI)
       begin
