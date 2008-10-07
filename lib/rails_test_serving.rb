@@ -46,15 +46,18 @@ module RailsTestServing
   module Client
     extend self
     
-    def tests_on_exit=(yes)
-      Test::Unit.run = !yes
-    end
+    # Setting this variable to true inhibits #run_tests.
+    @@disabled = false
     
     def disable
       @@disabled = true
       yield
     ensure
       @@disabled = false
+    end
+    
+    def tests_on_exit=(yes)
+      Test::Unit.run = !yes
     end
     
     def run_tests
