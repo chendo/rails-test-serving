@@ -170,9 +170,10 @@ module RailsTestServing
     def perform_run(file, argv)
       check_cleaner_health
       sleep 0.01 until @cleaner.stop?
-      result = nil
+      
       log ">> " + [shorten_path(file), *argv].join(' ')
       
+      result = nil
       begin
         elapsed = Benchmark.realtime do
           result = capture_test_result(file, argv)
@@ -180,9 +181,9 @@ module RailsTestServing
       rescue
         log " (aborted)\n"
         raise
+      else
+        log " (%d ms)\n" % (elapsed * 1000)
       end
-      
-      log " (%d ms)\n" % (elapsed * 1000)
       result
     end
     
