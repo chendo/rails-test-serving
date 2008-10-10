@@ -28,8 +28,8 @@ Tired of waitings 10 seconds before your tests run?
 == Caveats
 
 * Seems to cause trouble with integration tests. I really don't understand what is going between the
-  two. From what I experienced so far, something really weird happens: after the first request inside
-  a test, for example a <tt>get '/'</tt>, database records disappear.
+  two. From my experiments so far, something really weird happens: after the first request inside a
+  test, for example a <tt>get '/'</tt>, database records disappear.
 * There might exist some quirks: search for "TODO" in the source. I can bear them
   but contributions are welcome.
 * Some unit tests are left to be written.
