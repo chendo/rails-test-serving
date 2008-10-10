@@ -5,9 +5,6 @@ Tired of waitings 10 seconds before your tests run?
 1.  Insert the following lines at the very top of <tt>test/test_helper.rb</tt>:
       require 'rails_test_serving'
       RailsTestServing.boot
-      
-      ENV["RAILS_ENV"] = "test"
-      # ... (rest of test_helper.rb)
 
 2.  Start the server:
       cd <project-dir>
