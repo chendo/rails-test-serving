@@ -2,14 +2,12 @@ Tired of waitings 10 seconds before your tests run?
 
 == Quick usage instructions
 
-1.  Insert the following lines at the top of <tt>test/test_helper.rb</tt>, right after
-    <tt>ENV["RAILS_ENV"] = "test"</tt>:
-      ENV["RAILS_ENV"] = "test"
-      
+1.  Insert the following lines at the very top of <tt>test/test_helper.rb</tt>:
       require 'rails_test_serving'
       RailsTestServing.boot
       
-      # ... rest of test_helper.rb
+      ENV["RAILS_ENV"] = "test"
+      # ... (rest of test_helper.rb)
 
 2.  Start the server:
       cd <project-dir>
@@ -20,16 +18,10 @@ Tired of waitings 10 seconds before your tests run?
       ruby test/unit/account_test.rb -n /balance/
     As a consequence, they work in RubyMate too (⌘R in TextMate).
 
-== Notes
-
-* The first run will be slow as Rails is loading. Subsequent runs will be fast.
-* If the server is not started, tests fall back to running the usual way.
+*Note:* if the server is not started, tests fall back to running the usual way.
 
 == Caveats
 
-* Seems to cause trouble with integration tests. I really don't understand what is going between the
-  two. From my experiments so far, something really weird happens: after the first request inside a
-  test, for example a <tt>get '/'</tt>, database records disappear.
 * There might exist some quirks: search for "TODO" in the source. I can bear them
   but contributions are welcome.
 * Some unit tests are left to be written.

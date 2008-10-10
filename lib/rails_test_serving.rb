@@ -14,6 +14,7 @@ module RailsTestServing
   
   def self.boot(argv=ARGV)
     if argv.delete('--serve')
+      require 'test_helper'
       Server.start
     else
       Client.run_tests

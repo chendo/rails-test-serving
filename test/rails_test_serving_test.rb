@@ -18,6 +18,7 @@ class RailsTestServingTest < Test::Unit::TestCase
     
     argv = ["--serve"]
     Server.expects(:start)
+    RailsTestServing.expects(:require).with('test_helper')
     RailsTestServing.boot(argv)
     assert_equal [], argv
   end
