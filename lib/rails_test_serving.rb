@@ -15,6 +15,7 @@ module RailsTestServing
   def self.boot(argv=ARGV)
     if argv.delete('--serve')
       Server.start
+      yield if block_given?
     else
       Client.run_tests
     end
