@@ -1,12 +1,19 @@
+require 'thread'
 require 'test/unit'
 require 'drb/unix'
 require 'stringio'
+require 'benchmark'
 
 module RailsTestServing
+  class InvalidArgumentListPattern < ArgumentError
+  end
+  class ServerUnavailable < StandardError
+  end
+  
   SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
   
-  def self.boot
-    if ARGV.delete('--serve')
+  def self.boot(argv=ARGV)
+    if argv.delete('--serve')
       Server.start
     else
       Client.run_tests
@@ -30,7 +37,7 @@ module RailsTestServing
     
     # ActiveSupport's Module#remove_class doesn't behave quite the way I would expect it to.
     def remove_constants(*names)
-      names.each do |name|
+      names.map do |name|
         namespace, short = name.to_s =~ /^(.+)::(.+?)$/ ? [$1, $2] : ['Object', name]
         constantize!(namespace).module_eval { remove_const(short) if const_defined?(short) }
       end
@@ -56,19 +63,41 @@ module RailsTestServing
       @@disabled = false
     end
     
+    def tests_on_exit
+      !Test::Unit.run?
+    end
+    
     def tests_on_exit=(yes)
       Test::Unit.run = !yes
     end
     
     def run_tests
       return if @@disabled
+      run_tests!
+    end
+  
+  private
+  
+    def run_tests!
+      handle_process_lifecycle do
+        server = DRbObject.new_with_uri(SERVICE_URI)
+        begin
+          puts(server.run($0, ARGV))
+        rescue DRb::DRbConnError
+          raise ServerUnavailable
+        end
+      end
+    end
+    
+    def handle_process_lifecycle
       Client.tests_on_exit = false
-      server = DRbObject.new_with_uri(SERVICE_URI)
       begin
-        puts server.run($0, ARGV)
-        exit 0
-      rescue DRb::DRbConnError
+        yield
+      rescue ServerUnavailable, InvalidArgumentListPattern
         Client.tests_on_exit = true
+      else
+        # TODO exit with a status code reflecting the result of the tests
+        exit 0
       end
     end
   end
@@ -83,6 +112,8 @@ module RailsTestServing
           ActionController::TestCase
           ActionController::IntegrationTest )
     
+    @@guard = Mutex.new
+    
     def self.start
       DRb.start_service(SERVICE_URI, Server.new)
       DRb.thread.join
@@ -91,27 +122,34 @@ module RailsTestServing
     def initialize
       enable_dependency_tracking
       start_cleaner
+      log "** Test server started (##{$$})\n"
     end
     
     def run(file, argv)
-      check_cleaner_health
-      sleep 0.01 until @cleaner.stop?
-      
-      with_default_testrunner_io(StringIO.new) do
-        with_fixed_objectspace_collector do
-          Client.disable { load(file) }
-          Test::Unit::AutoRunner.run(false, nil, argv)
-          @cleaner.wakeup
-        end
-      end.string
+      @@guard.synchronize { perform_run(file, argv) }
     end
     
   private
   
+    def log(message)
+      $stdout.print(message)
+      $stdout.flush
+    end
+    
+    def shorten_path(path)
+      shortenable, base = File.expand_path(path), File.expand_path(Dir.pwd)
+      attempt = shortenable.sub(/^#{Regexp.escape base + File::SEPARATOR}/, '')
+      attempt.length < path.length ? attempt : path
+    end
+    
     def enable_dependency_tracking
       require 'initializer'
       
       Rails::Configuration.class_eval do
+        unless method_defined? :cache_classes
+          raise "#{self.class} not in sync with current Rails version"
+        end
+        
         def cache_classes
           false
         end
@@ -129,9 +167,28 @@ module RailsTestServing
       end
     end
     
+    def perform_run(file, argv)
+      check_cleaner_health
+      sleep 0.01 until @cleaner.stop?
+      result = nil
+      log ">> " + [shorten_path(file), *argv].join(' ')
+      
+      begin
+        elapsed = Benchmark.realtime do
+          result = capture_test_result(file, argv)
+        end
+      rescue
+        log " (aborted)\n"
+        raise
+      end
+      
+      log " (%d ms)\n" % (elapsed * 1000)
+      result
+    end
+    
     def check_cleaner_health
       unless @cleaner.alive?
-        STDERR.puts "error: cleaning thread died, restarting"
+        $stderr.puts "cleaning thread died, restarting"
         start_cleaner
       end
     end
@@ -149,7 +206,47 @@ module RailsTestServing
       dispatcher.reload_application
     end
     
-    def with_default_testrunner_io(io)
+    def capture_test_result(file, argv)
+      result = []
+      result << capture_standard_stream('err') do
+        result << capture_standard_stream('out') do
+          result << capture_testrunner_result do
+            fix_objectspace_collector do
+              Client.disable { process_arguments!(file, argv) }
+              Test::Unit::AutoRunner.run(false, nil, argv)
+              @cleaner.wakeup
+            end
+          end
+        end
+      end
+      result.reverse.join
+    end
+    
+    def process_arguments!(file, argv)
+      raise InvalidArgumentListPattern if file =~ /^-/
+      load(file)
+    end
+    
+    def capture_standard_stream(name)
+      eval("old, $std#{name} = $std#{name}, StringIO.new")
+      begin
+        yield
+        return eval("$std#{name}").string
+      ensure
+        eval("$std#{name} = old")
+      end
+    end
+    
+    def capture_testrunner_result
+      set_default_testrunner_stream(io = StringIO.new) { yield }
+      io.string
+    end
+    
+    # When TestRunner is not used explicitely, such a method is needed to get its
+    # output as it uses the +STDOUT+ constant as the default output stream.
+    # Unfortunately, it seems that this stream can't be captured, as opposed
+    # to +$stdout+.
+    def set_default_testrunner_stream(io)
       require 'test/unit/ui/console/testrunner'
       
       Test::Unit::UI::Console::TestRunner.class_eval do
@@ -161,8 +258,7 @@ module RailsTestServing
       Thread.current["test_runner_io"] = io
       
       begin
-        yield
-        return io
+        return yield
       ensure
         Thread.current["test_runner_io"] = nil
         Test::Unit::UI::Console::TestRunner.class_eval do
@@ -172,7 +268,11 @@ module RailsTestServing
       end
     end
     
-    def with_fixed_objectspace_collector
+    # The stock ObjectSpace collector collects every single class that inherits
+    # from Test::Unit, including those which have just been unassigned from
+    # their constant and not yet garbage collected. This method fixes that
+    # behaviour by filtering out these soon-to-be-garbage-collected classes.
+    def fix_objectspace_collector
       require 'test/unit/collector/objectspace'
       
       Test::Unit::Collector::ObjectSpace.class_eval do

@@ -2,9 +2,14 @@ Tired of waitings 10 seconds before your tests run?
 
 == Quick usage instructions
 
-1.  Insert the following lines at the very top of <tt>test/test_helper.rb</tt>:
+1.  Insert the following lines at the top of <tt>test/test_helper.rb</tt>, right after
+    <tt>ENV["RAILS_ENV"] = "test"</tt>:
+      ENV["RAILS_ENV"] = "test"
+      
       require 'rails_test_serving'
       RailsTestServing.boot
+      
+      # ... rest of test_helper.rb
 
 2.  Start the server:
       cd <project-dir>
@@ -22,6 +27,9 @@ Tired of waitings 10 seconds before your tests run?
 
 == Caveats
 
+* Seems to cause trouble with integration tests. I really don't understand what is going between the
+  two. From what I experienced so far, something really weird happens: after the first request inside
+  a test, for example a <tt>get '/'</tt>, database records disappear.
 * There might exist some quirks: search for "TODO" in the source. I can bear them
   but contributions are welcome.
-* Unit tests need to be written.
+* Some unit tests are left to be written.
