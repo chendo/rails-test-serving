@@ -148,7 +148,7 @@ module RailsTestServing
       
       Rails::Configuration.class_eval do
         unless method_defined? :cache_classes
-          raise "#{self.class} not in sync with current Rails version"
+          raise "#{self.class} out of sync with current Rails version"
         end
         
         def cache_classes

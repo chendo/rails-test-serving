@@ -41,8 +41,8 @@ class RailsTestServing::ConstantManagementTest < Test::Unit::TestCase
     
     assert !legit?("Inexistent")
     
-    fake = stub(:to_s => "#{NS}::NamedFoo")
-    assert_equal "#{NS}::NamedFoo", "#{fake}"   # sanity check
+    fake = stub(:to_s => NamedFoo.to_s)
+    assert_equal NamedFoo.to_s, "#{fake}"   # sanity check
     assert !legit?(fake)
   end
   
