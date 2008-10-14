@@ -18,7 +18,6 @@ class RailsTestServingTest < Test::Unit::TestCase
     
     argv = ["--serve"]
     Server.expects(:start)
-    RailsTestServing.expects(:require).with('test_helper')
     RailsTestServing.boot(argv)
     assert_equal [], argv
   end
@@ -99,11 +98,8 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
 # private
 
   def test_perform_run
-    server, cleaner = stub_server
+    server = stub_server
     file, argv = "test.rb", ["-n", "/pat/"]
-    
-    server.stubs(:check_cleaner_health)
-    cleaner.stubs(:stop?).returns true
     
     Benchmark.stubs(:realtime).yields.returns 1
     
@@ -126,7 +122,7 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
   end
 
   def test_shorten_path
-    server, cleaner = stub_server
+    server = stub_server
     Dir.stubs(:pwd).returns '/base'
     
     assert_equal 'test.rb', server.instance_eval { shorten_path 'test.rb' }
@@ -136,7 +132,10 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
   end
 
   def test_capture_test_result
-    server, cleaner = stub_server
+    server = stub_server
+    cleaner = server.instance_variable_set(:@cleaner, stub)
+    
+    cleaner.stubs(:clean_up_around).yields
     server.stubs(:capture_standard_stream).with('err').yields.returns "stderr"
     server.stubs(:capture_standard_stream).with('out').yields.returns "stdout"
     server.stubs(:capture_testrunner_result).yields.returns "result"
@@ -144,14 +143,13 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
     
     server.stubs(:process_arguments!).with("file", "argv")
     Test::Unit::AutoRunner.expects(:run).with(false, nil, "argv")
-    cleaner.expects(:wakeup)
     
     result = server.instance_eval { capture_test_result("file", "argv") }
     assert_equal "stderrstdoutresult", result
   end
   
   def test_capture_standard_stream
-    server, cleaner = stub_server
+    server = stub_server
     assert_equal STDOUT, $stdout  # sanity check
     
     captured = server.instance_eval { capture_standard_stream('out') { print "test" } }
@@ -161,7 +159,7 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
   end
   
   def test_capture_testrunner_result
-    server, cleaner = stub_server
+    server = stub_server
     
     captured = server.instance_eval do
       capture_testrunner_result { Thread.current["test_runner_io"].print "test" }
@@ -177,11 +175,8 @@ private
   def stub_server
     S.any_instance.stubs(:enable_dependency_tracking)
     S.any_instance.stubs(:start_cleaner)
+    S.any_instance.stubs(:load_framework)
     S.any_instance.stubs(:log)
-    
-    server = S.new
-    cleaner = server.instance_variable_set(:@cleaner, stub)
-    
-    [server, cleaner]
+    S.new
   end
 end

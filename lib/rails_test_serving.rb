@@ -14,7 +14,6 @@ module RailsTestServing
   
   def self.boot(argv=ARGV)
     if argv.delete('--serve')
-      require 'test_helper'
       Server.start
     else
       Client.run_tests
@@ -104,16 +103,7 @@ module RailsTestServing
   end
   
   class Server
-    include ConstantManagement
-    
-    TESTCASE_CLASS_NAMES =
-      %w( Test::Unit::TestCase
-          ActiveSupport::TestCase
-          ActionView::TestCase
-          ActionController::TestCase
-          ActionController::IntegrationTest )
-    
-    @@guard = Mutex.new
+    GUARD = Mutex.new
     
     def self.start
       DRb.start_service(SERVICE_URI, Server.new)
@@ -123,11 +113,13 @@ module RailsTestServing
     def initialize
       enable_dependency_tracking
       start_cleaner
+      load_framework
+      
       log "** Test server started (##{$$})\n"
     end
     
     def run(file, argv)
-      @@guard.synchronize { perform_run(file, argv) }
+      GUARD.synchronize { perform_run(file, argv) }
     end
     
   private
@@ -158,20 +150,14 @@ module RailsTestServing
     end
     
     def start_cleaner
-      @cleaner = Thread.new do
-        Thread.abort_on_exception = true
-        loop do
-          Thread.stop
-          remove_tests
-          reload_app
-        end
-      end
+      @cleaner = Cleaner.new
+    end
+    
+    def load_framework
+      require 'test_helper'
     end
     
     def perform_run(file, argv)
-      check_cleaner_health
-      sleep 0.01 until @cleaner.stop?
-      
       log ">> " + [shorten_path(file), *argv].join(' ')
       
       result = nil
@@ -188,35 +174,16 @@ module RailsTestServing
       result
     end
     
-    def check_cleaner_health
-      unless @cleaner.alive?
-        $stderr.puts "cleaning thread died, restarting"
-        start_cleaner
-      end
-    end
-    
-    def remove_tests
-      TESTCASE_CLASS_NAMES.each do |name|
-        next unless klass = constantize(name)
-        remove_constants(*subclasses_of(klass).map { |c| c.to_s }.grep(/Test$/) - TESTCASE_CLASS_NAMES)
-      end
-    end
-    
-    def reload_app
-      dispatcher = ActionController::Dispatcher.new($stdout)
-      dispatcher.cleanup_application
-      dispatcher.reload_application
-    end
-    
     def capture_test_result(file, argv)
       result = []
-      result << capture_standard_stream('err') do
-        result << capture_standard_stream('out') do
-          result << capture_testrunner_result do
-            fix_objectspace_collector do
-              Client.disable { process_arguments!(file, argv) }
-              Test::Unit::AutoRunner.run(false, nil, argv)
-              @cleaner.wakeup
+      @cleaner.clean_up_around do
+        result << capture_standard_stream('err') do
+          result << capture_standard_stream('out') do
+            result << capture_testrunner_result do
+              fix_objectspace_collector do
+                Client.disable { process_arguments!(file, argv) }
+                Test::Unit::AutoRunner.run(false, nil, argv)
+              end
             end
           end
         end
@@ -296,6 +263,75 @@ module RailsTestServing
           remove_method :old_collect
         end
       end
+    end
+  end
+  
+  class Cleaner
+    include ConstantManagement
+    
+    BREATH = 0.01
+    TESTCASE_CLASS_NAMES =
+      %w( Test::Unit::TestCase
+          ActiveSupport::TestCase
+          ActionView::TestCase
+          ActionController::TestCase
+          ActionController::IntegrationTest )
+    
+    def initialize
+      start_worker
+    end
+    
+    def clean_up_around
+      check_worker_health
+      sleep BREATH while @working
+      begin
+        reload_app
+        yield
+      ensure
+        @working = true
+        sleep BREATH until @worker.stop?
+        @worker.wakeup
+      end
+    end
+    
+  private
+    
+    def start_worker
+      @worker = Thread.new do
+        Thread.abort_on_exception = true
+        loop do
+          Thread.stop
+          begin
+            clean_up_app
+            remove_tests
+          ensure
+            @working = false
+          end
+        end
+      end
+      @working = false
+    end
+    
+    def check_worker_health
+      unless @worker.alive?
+        $stderr.puts "cleaning thread died, restarting"
+        start_worker
+      end
+    end
+    
+    def clean_up_app
+      ActionController::Dispatcher.new.cleanup_application
+    end
+    
+    def remove_tests
+      TESTCASE_CLASS_NAMES.each do |name|
+        next unless klass = constantize(name)
+        remove_constants(*subclasses_of(klass).map { |c| c.to_s }.grep(/Test$/) - TESTCASE_CLASS_NAMES)
+      end
+    end
+    
+    def reload_app
+      ActionController::Dispatcher.new.reload_application
     end
   end
 end unless defined? RailsTestServing
