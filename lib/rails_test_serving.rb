@@ -111,6 +111,7 @@ module RailsTestServing
     end
     
     def initialize
+      ENV['RAILS_ENV'] = 'test'
       enable_dependency_tracking
       start_cleaner
       load_framework
@@ -154,7 +155,7 @@ module RailsTestServing
     end
     
     def load_framework
-      require 'test_helper'
+      Client.disable { require 'test_helper' }
     end
     
     def perform_run(file, argv)
