@@ -159,6 +159,9 @@ module RailsTestServing
     end
     
     def perform_run(file, argv)
+      argv = argv.grep(/^-/)  # Filter out the junk that TextMate seems to inject
+                              # into ARGV when running focused tests.
+      
       log ">> " + [shorten_path(file), *argv].join(' ')
       
       result = nil
