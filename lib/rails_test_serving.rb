@@ -5,7 +5,7 @@ require 'stringio'
 require 'benchmark'
 
 module RailsTestServing
-  class InvalidArgumentListPattern < ArgumentError
+  class InvalidArgumentPattern < ArgumentError
   end
   class ServerUnavailable < StandardError
   end
@@ -93,7 +93,7 @@ module RailsTestServing
       Client.tests_on_exit = false
       begin
         yield
-      rescue ServerUnavailable, InvalidArgumentListPattern
+      rescue ServerUnavailable, InvalidArgumentPattern
         Client.tests_on_exit = true
       else
         # TODO exit with a status code reflecting the result of the tests
@@ -159,8 +159,7 @@ module RailsTestServing
     end
     
     def perform_run(file, argv)
-      argv = argv.grep(/^-/)  # Filter out the junk that TextMate seems to inject
-                              # into ARGV when running focused tests.
+      sanitize_arguments! file, argv
       
       log ">> " + [shorten_path(file), *argv].join(' ')
       
@@ -178,6 +177,18 @@ module RailsTestServing
       result
     end
     
+    def sanitize_arguments!(file, argv)
+      if file =~ /^-/
+        # No file was specified for loading, only options. It's the case with
+        # Autotest.
+        raise InvalidArgumentPattern
+      end
+      
+      # Filter out the junk that TextMate seems to inject into ARGV when running
+      # focused tests.
+      argv.replace(argv.grep(/^-/))   
+    end
+    
     def capture_test_result(file, argv)
       result = []
       @cleaner.clean_up_around do
@@ -185,7 +196,7 @@ module RailsTestServing
           result << capture_standard_stream('out') do
             result << capture_testrunner_result do
               fix_objectspace_collector do
-                Client.disable { process_arguments!(file, argv) }
+                Client.disable { load(file) }
                 Test::Unit::AutoRunner.run(false, nil, argv)
               end
             end
@@ -193,11 +204,6 @@ module RailsTestServing
         end
       end
       result.reverse.join
-    end
-    
-    def process_arguments!(file, argv)
-      raise InvalidArgumentListPattern if file =~ /^-/
-      load(file)
     end
     
     def capture_standard_stream(name)
