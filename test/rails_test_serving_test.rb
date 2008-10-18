@@ -101,6 +101,7 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
     server = stub_server
     file, argv = "test.rb", ["-n", "/pat/"]
     
+    server.stubs(:sanitize_arguments!)
     Benchmark.stubs(:realtime).yields.returns 1
     
     # normal run
@@ -141,7 +142,7 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
     server.stubs(:capture_testrunner_result).yields.returns "result"
     server.stubs(:fix_objectspace_collector).yields
     
-    server.stubs(:process_arguments!).with("file", "argv")
+    server.stubs(:load).with("file")
     Test::Unit::AutoRunner.expects(:run).with(false, nil, "argv")
     
     result = server.instance_eval { capture_test_result("file", "argv") }
