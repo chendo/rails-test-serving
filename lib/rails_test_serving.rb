@@ -186,7 +186,9 @@ module RailsTestServing
       
       # Filter out the junk that TextMate seems to inject into ARGV when running
       # focused tests.
-      argv.replace(argv.grep(/^-/))   
+      while a = find_index_by_pattern(argv, /^\[/) and z = find_index_by_pattern(argv[a..-1], /\]$/)
+        argv[a..a+z] = []
+      end
     end
     
     def capture_test_result(file, argv)
@@ -273,6 +275,15 @@ module RailsTestServing
           remove_method :old_collect
         end
       end
+    end
+    
+  private
+  
+    def find_index_by_pattern(enumerable, pattern)
+      enumerable.each_with_index do |element, index|
+        return index if pattern === element
+      end
+      nil
     end
   end
   

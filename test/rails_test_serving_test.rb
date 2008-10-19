@@ -104,21 +104,45 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
     server.stubs(:sanitize_arguments!)
     Benchmark.stubs(:realtime).yields.returns 1
     
-    # normal run
     server.expects(:log).with(">> test.rb -n /pat/").once
     server.stubs(:capture_test_result).with(file, argv).returns "result"
     server.expects(:log).with(" (1000 ms)\n").once
   
     result = server.instance_eval { perform_run(file, argv) }
     assert_equal "result", result
+  end
+  
+  def test_sanitize_arguments
+    server = stub_server
+    sanitize = lambda { |*args| server.instance_eval { sanitize_arguments! *args } }
     
-    # invalid argument list
-    server.expects(:log).with(">> test.rb -n /pat/").once
-    server.stubs(:capture_test_result).raises RuntimeError
-    server.expects(:log).with(" (aborted)\n").once
+    # valid
+    file, argv = "test.rb", ["--name=test_create"]
+    sanitize.call file, argv
     
-    assert_raise(RuntimeError) do
-      server.instance_eval { perform_run("test.rb", ["-n", "/pat/"]) }
+    assert_equal "test.rb", file
+    assert_equal ["--name=test_create"], argv
+    
+    # TextMate junk
+    junk = "[test_create,", "nil,", "nil]"
+    
+    # a)  at the beginning
+    file, argv = "test.rb", junk + ["foo"]
+    sanitize.call file, argv
+    
+    assert_equal "test.rb", file
+    assert_equal ["foo"], argv
+    
+    # b)  in between normal arguments
+    file, argv = "test.rb", ["foo"] + junk + ["bar"]
+    sanitize.call file, argv
+    
+    assert_equal "test.rb", file
+    assert_equal ["foo", "bar"], argv
+    
+    # invalid arguments
+    assert_raise RailsTestServing::InvalidArgumentPattern do
+      sanitize.call "-e", ["code"]
     end
   end
 
