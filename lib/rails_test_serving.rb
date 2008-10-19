@@ -168,9 +168,6 @@ module RailsTestServing
         elapsed = Benchmark.realtime do
           result = capture_test_result(file, argv)
         end
-      rescue
-        log " (aborted)\n"
-        raise
       else
         log " (%d ms)\n" % (elapsed * 1000)
       end
