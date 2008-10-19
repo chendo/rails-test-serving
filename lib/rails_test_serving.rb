@@ -164,13 +164,10 @@ module RailsTestServing
       log ">> " + [shorten_path(file), *argv].join(' ')
       
       result = nil
-      begin
-        elapsed = Benchmark.realtime do
-          result = capture_test_result(file, argv)
-        end
-      else
-        log " (%d ms)\n" % (elapsed * 1000)
+      elapsed = Benchmark.realtime do
+        result = capture_test_result(file, argv)
       end
+      log " (%d ms)\n" % (elapsed * 1000)
       result
     end
     
