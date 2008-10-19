@@ -15,7 +15,7 @@ module RailsTestServing
   def self.boot(argv=ARGV)
     if argv.delete('--serve')
       Server.start
-    else
+    elsif !argv.delete('--local')
       Client.run_tests
     end
   end

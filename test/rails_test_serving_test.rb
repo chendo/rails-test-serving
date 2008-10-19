@@ -14,7 +14,11 @@ class RailsTestServingTest < Test::Unit::TestCase
     argv = []
     Client.expects(:run_tests)
     RailsTestServing.boot(argv)
-    assert !Client.tests_on_exit
+    
+    argv = ['--local']
+    Client.expects(:run_tests).never
+    RailsTestServing.boot(argv)
+    assert_equal [], argv
     
     argv = ["--serve"]
     Server.expects(:start)
