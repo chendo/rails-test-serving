@@ -128,7 +128,7 @@ class RailsTestServing::ServerTest < Test::Unit::TestCase
     assert_equal ["--name=test_create"], argv
     
     # TextMate junk
-    junk = "[test_create,", "nil,", "nil]"
+    junk = ["[test_create,", "nil,", "nil]"]
     
     # a)  at the beginning
     file, argv = "test.rb", junk + ["foo"]
