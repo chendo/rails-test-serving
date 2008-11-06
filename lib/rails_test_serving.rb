@@ -217,10 +217,10 @@ module RailsTestServing
       io.string
     end
     
-    # When TestRunner is not used explicitely, such a method is needed to get its
-    # output as it uses the +STDOUT+ constant as the default output stream.
-    # Unfortunately, it seems that this stream can't be captured, as opposed
-    # to +$stdout+.
+    # The default output stream of TestRunner is STDOUT which cannot be captured
+    # and, as a consequence, neither can TestRunner output when not instantiated
+    # explicitely. The following method can change the default output stream
+    # argument so that it can be set to a stream that can be captured instead.
     def set_default_testrunner_stream(io)
       require 'test/unit/ui/console/testrunner'
       
@@ -285,12 +285,11 @@ module RailsTestServing
     include ConstantManagement
     
     BREATH = 0.01
-    TESTCASE_CLASS_NAMES =
-      %w( Test::Unit::TestCase
-          ActiveSupport::TestCase
-          ActionView::TestCase
-          ActionController::TestCase
-          ActionController::IntegrationTest )
+    TESTCASE_CLASS_NAMES =  %w( Test::Unit::TestCase
+                                ActiveSupport::TestCase
+                                ActionView::TestCase
+                                ActionController::TestCase
+                                ActionController::IntegrationTest )
     
     def initialize
       start_worker
