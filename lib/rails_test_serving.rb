@@ -289,7 +289,8 @@ module RailsTestServing
                                 ActiveSupport::TestCase
                                 ActionView::TestCase
                                 ActionController::TestCase
-                                ActionController::IntegrationTest )
+                                ActionController::IntegrationTest
+                                ActionMailer::TestCase )
     
     def initialize
       start_worker
