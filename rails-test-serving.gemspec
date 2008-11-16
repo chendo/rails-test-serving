@@ -38,12 +38,12 @@ has_rdoc: true
 homepage: https://github.com/Roman2K/rails-test-serving
 post_install_message: 
 rdoc_options: 
-- --line-numbers
-- --inline-source
-- --title
-- Rails-test-serving
 - --main
 - README.rdoc
+- --inline-source
+- --line-numbers
+- --charset
+- UTF-8
 require_paths: 
 - lib
 required_ruby_version: !ruby/object:Gem::Requirement 
