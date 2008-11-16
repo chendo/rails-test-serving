@@ -1,4 +1,4 @@
-Tired of waitings 10 seconds before your tests run?
+Tired of waiting 10 seconds before your tests run? RailsTestServing can make them run almost instantly. Details in the {introduction article}[http://roman.flucti.com/a-test-server-for-rails-applications].
 
 == Quick usage instructions
 
@@ -15,7 +15,7 @@ Tired of waitings 10 seconds before your tests run?
       ruby test/unit/account_test.rb -n /balance/
     As a consequence, they work in RubyMate too (⌘R in TextMate).
 
-*Note:* if the server is not started, tests fall back to running the usual way.
+<b>Note:</b> if the server is not started, tests fall back to running the usual way.
 
 == Caveats
 

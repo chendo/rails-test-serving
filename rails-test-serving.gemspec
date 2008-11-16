@@ -29,11 +29,11 @@ extra_rdoc_files:
 files: 
 - lib/rails_test_serving.rb
 - LICENSE
+- Manifest
+- rails-test-serving.gemspec
 - Rakefile
 - README.rdoc
 - test/rails_test_serving_test.rb
-- Manifest
-- rails-test-serving.gemspec
 has_rdoc: true
 homepage: https://github.com/Roman2K/rails-test-serving
 post_install_message: 
