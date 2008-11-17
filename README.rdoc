@@ -3,17 +3,21 @@ Tired of waiting 10 seconds before your tests run? RailsTestServing can make the
 == Quick usage instructions
 
 1.  Install the gem:
-      gem install Roman2K-rails-test-serving -s http://gems.github.com
+      gem install Roman2K-rails-test-serving -v '>= 0.1.1' -s http://gems.github.com
 
 2.  Insert the following lines at the very top of <tt>test/test_helper.rb</tt>:
+      require 'rubygems'
       require 'rails_test_serving'
       RailsTestServing.boot
 
-3.  Start the server:
+3.  Append the following line to <tt>~/.bash_login</tt>:
+      export RUBYLIB="test:$RUBYLIB"
+
+4.  Start the server:
       cd <project-dir>
       ruby test/test_helper.rb --serve
 
-4.  Run tests as you usually do:
+5.  Run tests as you usually do:
       ruby test/unit/account_test.rb
       ruby test/unit/account_test.rb -n /balance/
     As a consequence, they work in RubyMate too (⌘R in TextMate).
@@ -22,8 +26,8 @@ Tired of waiting 10 seconds before your tests run? RailsTestServing can make the
 
 == Caveats
 
-* There might exist some quirks: search for "TODO" in the source. I can bear them
-  but contributions are welcome.
+* Tested working with Rails 2.1.2 up to 2.2.0 RC2. Compatibility with versions of Rails out of that range is guaranteed.
+* There might exist some quirks: search for "TODO" in the source. I can bear them but contributions are welcome.
 * Some unit tests are left to be written.
 
 == Credits

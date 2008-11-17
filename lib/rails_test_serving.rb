@@ -137,7 +137,7 @@ module RailsTestServing
     end
     
     def enable_dependency_tracking
-      require 'initializer'
+      require 'config/boot'
       
       Rails::Configuration.class_eval do
         unless method_defined? :cache_classes
@@ -155,7 +155,10 @@ module RailsTestServing
     end
     
     def load_framework
-      Client.disable { require 'test_helper' }
+      Client.disable do
+        $: << 'test'
+        require 'test_helper'
+      end
     end
     
     def perform_run(file, argv)
@@ -335,7 +338,7 @@ module RailsTestServing
     end
     
     def clean_up_app
-      ActionController::Dispatcher.new.cleanup_application
+      ActionController::Dispatcher.new(StringIO.new).cleanup_application
     end
     
     def remove_tests
@@ -346,7 +349,7 @@ module RailsTestServing
     end
     
     def reload_app
-      ActionController::Dispatcher.new.reload_application
+      ActionController::Dispatcher.new(StringIO.new).reload_application
     end
   end
 end unless defined? RailsTestServing
