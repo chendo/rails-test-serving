@@ -12,17 +12,20 @@ class RailsTestServingTest < Test::Unit::TestCase
 # class
 
   def test_service_uri
+    # RAILS_ROOT is the current directory
     setup_service_uri_test do
       FileTest.expects(:file?).with("config/boot.rb").returns true
       assert_equal "drbunix:test.sock", RailsTestServing.service_uri
     end
     
+    # RAILS_ROOT is in the parent directory
     setup_service_uri_test do
       FileTest.stubs(:file?).with("config/boot.rb").returns false
       FileTest.stubs(:file?).with("../config/boot.rb").returns true
       assert_equal "drbunix:../test.sock", RailsTestServing.service_uri
     end
     
+    # RAILS_ROOT cannot be determined
     setup_service_uri_test do
       Pathname.stubs(:pwd).returns(Pathname("/foo/bar"))
       FileTest.stubs(:file?).with("config/boot.rb").returns false
