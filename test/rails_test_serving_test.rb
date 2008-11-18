@@ -11,6 +11,28 @@ class RailsTestServingTest < Test::Unit::TestCase
   
 # class
 
+  def test_service_uri
+    setup_service_uri_test do
+      FileTest.expects(:file?).with("config/boot.rb").returns true
+      assert_equal "drbunix:test.sock", RailsTestServing.service_uri
+    end
+    
+    setup_service_uri_test do
+      FileTest.stubs(:file?).with("config/boot.rb").returns false
+      FileTest.stubs(:file?).with("../config/boot.rb").returns true
+      assert_equal "drbunix:../test.sock", RailsTestServing.service_uri
+    end
+    
+    setup_service_uri_test do
+      Pathname.stubs(:pwd).returns(Pathname("/foo/bar"))
+      FileTest.stubs(:file?).with("config/boot.rb").returns false
+      FileTest.stubs(:file?).with("../config/boot.rb").returns false
+      FileTest.stubs(:file?).with("../../config/boot.rb").returns false
+      FileTest.stubs(:file?).with("../../../config/boot.rb").returns false
+      assert_raise(RuntimeError) { RailsTestServing.service_uri }
+    end
+  end
+
   def test_boot
     argv = []
     Client.expects(:run_tests)
@@ -25,6 +47,22 @@ class RailsTestServingTest < Test::Unit::TestCase
     Server.expects(:start)
     RailsTestServing.boot(argv)
     assert_equal [], argv
+  end
+  
+private
+
+  def setup_service_uri_test
+    old = SOCKET_PATH
+    SOCKET_PATH.replace('test.sock')
+    begin
+      begin
+        return yield
+      ensure
+        RailsTestServing.instance_variable_set(:@service_uri, nil)
+      end
+    ensure
+      SOCKET_PATH.replace(old)
+    end
   end
 end
 

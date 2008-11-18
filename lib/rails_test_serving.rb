@@ -1,3 +1,4 @@
+require 'pathname'
 require 'thread'
 require 'test/unit'
 require 'drb/unix'
@@ -10,7 +11,26 @@ module RailsTestServing
   class ServerUnavailable < StandardError
   end
   
-  SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
+  SOCKET_PATH = 'tmp/sockets/test_server.sock'
+  
+  def self.service_uri
+    @service_uri ||= begin
+      # Determine RAILS_ROOT
+      root, max_depth = Pathname('.'), Pathname.pwd.expand_path.to_s.split(File::SEPARATOR).size
+      until (found = root.join('config', 'boot.rb').file?) || root.to_s.split(File::SEPARATOR).size >= max_depth
+        root = root.parent
+      end
+      found or raise "RAILS_ROOT could not be determined"
+      root = root.cleanpath
+      
+      # Adjust load path
+      $: << root << root.join('test')
+      
+      path = root.join(SOCKET_PATH)
+      path.dirname.mkpath
+      "drbunix:#{path}"
+    end
+  end
   
   def self.boot(argv=ARGV)
     if argv.delete('--serve')
@@ -80,7 +100,7 @@ module RailsTestServing
   
     def run_tests!
       handle_process_lifecycle do
-        server = DRbObject.new_with_uri(SERVICE_URI)
+        server = DRbObject.new_with_uri(RailsTestServing.service_uri)
         begin
           puts(server.run($0, ARGV))
         rescue DRb::DRbConnError
@@ -106,16 +126,17 @@ module RailsTestServing
     GUARD = Mutex.new
     
     def self.start
-      DRb.start_service(SERVICE_URI, Server.new)
+      DRb.start_service(RailsTestServing.service_uri, Server.new)
       DRb.thread.join
     end
     
     def initialize
       ENV['RAILS_ENV'] = 'test'
+      @options = (defined? TEST_SERVER_OPTIONS) ? TEST_SERVER_OPTIONS : {}
+      @options[:reload] ||= []
       enable_dependency_tracking
       start_cleaner
       load_framework
-      
       log "** Test server started (##{$$})\n"
     end
     
@@ -130,6 +151,7 @@ module RailsTestServing
       $stdout.flush
     end
     
+    # TODO clean this up, making 'path' a Pathname instead of a String
     def shorten_path(path)
       shortenable, base = File.expand_path(path), File.expand_path(Dir.pwd)
       attempt = shortenable.sub(/^#{Regexp.escape base + File::SEPARATOR}/, '')
@@ -151,7 +173,7 @@ module RailsTestServing
     end
     
     def start_cleaner
-      @cleaner = Cleaner.new
+      @cleaner = Cleaner.new(@options)
     end
     
     def load_framework
@@ -295,7 +317,8 @@ module RailsTestServing
                                 ActionController::IntegrationTest
                                 ActionMailer::TestCase )
     
-    def initialize
+    def initialize(options = {})
+      @options = options
       start_worker
     end
     
@@ -339,6 +362,23 @@ module RailsTestServing
     
     def clean_up_app
       ActionController::Dispatcher.new(StringIO.new).cleanup_application
+      if @options[:reload].length > 0
+        matched_files = []
+        
+        # Force a reload by removing matched files from $"
+        $".delete_if do |path|
+          if @options[:reload].any? { |regex| File.expand_path(path).gsub(RAILS_ROOT, '') =~ Regexp.new(regex) }
+            matched_files << path
+            true
+          else
+            false
+          end
+        end
+        matched_files.each do |file|
+          # Expanding the path to prevent files from requiring twice
+          require File.expand_path(file)
+        end
+      end
     end
     
     def remove_tests
