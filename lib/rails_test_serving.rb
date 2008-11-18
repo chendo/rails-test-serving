@@ -1,4 +1,4 @@
-require 'fileutils'
+require 'pathname'
 require 'thread'
 require 'test/unit'
 require 'drb/unix'
@@ -11,30 +11,26 @@ module RailsTestServing
   class ServerUnavailable < StandardError
   end
   
+  SOCKET_PATH = 'tmp/sockets/test_server.sock'
+  
   def self.service_uri
-    @@service_uri ||= begin
-      service_uri = if result = $:.inject(nil) do |found_path, path|
-          next found_path if found_path
-          
-          # TODO: Could make this more DRY
-          next File.join(path, '..') if File.exists?(File.join(path, '../config/boot.rb'))
-          next File.join(path, '..', '..') if File.exists?(File.join(path, '../../config/boot.rb'))
-          next File.join(path, '..', '..', '..') if File.exists?(File.join(path, '../../../config/boot.rb'))
-        end
-        result = File.expand_path(result)
-        $:.unshift(result)
-        File.join(result, 'tmp/sockets/test_server.sock')
-      else
-        'tmp/sockets/test_server.sock'
+    @service_uri ||= begin
+      # Determine RAILS_ROOT
+      root, max_depth = Pathname('.'), Pathname.pwd.expand_path.to_s.split(File::SEPARATOR).size
+      until (found = root.join('config', 'boot.rb').file?) || root.to_s.split(File::SEPARATOR).size >= max_depth
+        root = root.parent
       end
-      FileUtils.mkdir_p(File.dirname(service_uri))
-      service_uri
+      found or raise "RAILS_ROOT could not be determined"
+      root = root.cleanpath
+      
+      # Adjust load path
+      $: << root << root.join('test')
+      
+      path = root.join(SOCKET_PATH)
+      path.dirname.mkpath
+      "drbunix:#{path}"
     end
-    "drbunix:" + @@service_uri
   end
-  
-  SERVICE_URI = self.service_uri
-  
   
   def self.boot(argv=ARGV)
     if argv.delete('--serve')
@@ -104,7 +100,7 @@ module RailsTestServing
   
     def run_tests!
       handle_process_lifecycle do
-        server = DRbObject.new_with_uri(SERVICE_URI)
+        server = DRbObject.new_with_uri(RailsTestServing.service_uri)
         begin
           puts(server.run($0, ARGV))
         rescue DRb::DRbConnError
@@ -130,7 +126,7 @@ module RailsTestServing
     GUARD = Mutex.new
     
     def self.start
-      DRb.start_service(SERVICE_URI, Server.new)
+      DRb.start_service(RailsTestServing.service_uri, Server.new)
       DRb.thread.join
     end
     
@@ -155,6 +151,7 @@ module RailsTestServing
       $stdout.flush
     end
     
+    # TODO clean this up, making 'path' a Pathname instead of a String
     def shorten_path(path)
       shortenable, base = File.expand_path(path), File.expand_path(Dir.pwd)
       attempt = shortenable.sub(/^#{Regexp.escape base + File::SEPARATOR}/, '')
