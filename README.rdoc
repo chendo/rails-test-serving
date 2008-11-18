@@ -11,7 +11,9 @@ Tired of waiting 10 seconds before your tests run? RailsTestServing can make the
       RailsTestServing.boot
 
 3.  Append the following line to <tt>~/.bash_login</tt>:
-      export RUBYLIB="test:$RUBYLIB"
+      export RUBYLIB=".:test:$RUBYLIB"
+    
+    If you are using TextMate, you should also apply {this (hopefully temporary) fix}[http://roman.flucti.com/textmate-fix-for-relative-require-test_helper].
 
 4.  Start the server:
       cd <project-dir>
