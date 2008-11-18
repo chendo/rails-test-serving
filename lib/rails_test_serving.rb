@@ -45,6 +45,14 @@ module RailsTestServing
     end
   end
   
+  def self.options
+    @options ||= begin
+      options = $test_server_options || {}
+      options[:reload] ||= []
+      options
+    end
+  end
+  
   module ConstantManagement
     extend self
     
@@ -137,8 +145,6 @@ module RailsTestServing
     
     def initialize
       ENV['RAILS_ENV'] = 'test'
-      @options = (defined? TEST_SERVER_OPTIONS) ? TEST_SERVER_OPTIONS : {}
-      @options[:reload] ||= []
       enable_dependency_tracking
       start_cleaner
       load_framework
@@ -178,7 +184,7 @@ module RailsTestServing
     end
     
     def start_cleaner
-      @cleaner = Cleaner.new(@options)
+      @cleaner = Cleaner.new
     end
     
     def load_framework
@@ -322,8 +328,7 @@ module RailsTestServing
                                 ActionController::IntegrationTest
                                 ActionMailer::TestCase )
     
-    def initialize(options = {})
-      @options = options
+    def initialize
       start_worker
     end
     
@@ -367,23 +372,6 @@ module RailsTestServing
     
     def clean_up_app
       ActionController::Dispatcher.new(StringIO.new).cleanup_application
-      if @options[:reload].length > 0
-        matched_files = []
-        
-        # Force a reload by removing matched files from $"
-        $".delete_if do |path|
-          if @options[:reload].any? { |regex| File.expand_path(path).gsub(RAILS_ROOT, '') =~ Regexp.new(regex) }
-            matched_files << path
-            true
-          else
-            false
-          end
-        end
-        matched_files.each do |file|
-          # Expanding the path to prevent files from requiring twice
-          require File.expand_path(file)
-        end
-      end
     end
     
     def remove_tests
@@ -394,7 +382,24 @@ module RailsTestServing
     end
     
     def reload_app
+      reload_specified_source_files
       ActionController::Dispatcher.new(StringIO.new).reload_application
+    end
+    
+    def reload_specified_source_files
+      to_reload =
+        $".select do |path|
+          RailsTestServing.options[:reload].any? do |matcher|
+            matcher === path
+          end
+        end
+      
+      # Force a reload by removing matched files from $"
+      $".replace($" - to_reload)
+      
+      to_reload.each do |file|
+        require file.split('.').first  # remove extension, most likely '.rb'
+      end
     end
   end
 end unless defined? RailsTestServing
