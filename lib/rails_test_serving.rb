@@ -11,11 +11,12 @@ module RailsTestServing
   class ServerUnavailable < StandardError
   end
   
-  #SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
   def self.service_uri
     @@service_uri ||= begin
       service_uri = if result = $:.inject(nil) do |found_path, path|
           next found_path if found_path
+          
+          # TODO: Could make this more DRY
           next File.join(path, '..') if File.exists?(File.join(path, '../config/boot.rb'))
           next File.join(path, '..', '..') if File.exists?(File.join(path, '../../config/boot.rb'))
           next File.join(path, '..', '..', '..') if File.exists?(File.join(path, '../../../config/boot.rb'))
