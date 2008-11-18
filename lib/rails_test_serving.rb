@@ -1,3 +1,4 @@
+require 'fileutils'
 require 'thread'
 require 'test/unit'
 require 'drb/unix'
@@ -12,8 +13,8 @@ module RailsTestServing
   
   #SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
   def self.service_uri
-    "drbunix:" + @@service_uri ||= begin
-      if result = $:.inject(nil) do |found_path, path|
+    @@service_uri ||= begin
+      service_uri = if result = $:.inject(nil) do |found_path, path|
           next found_path if found_path
           next File.join(path, '..') if File.exists?(File.join(path, '../config/boot.rb'))
           next File.join(path, '..', '..') if File.exists?(File.join(path, '../../config/boot.rb'))
@@ -25,7 +26,9 @@ module RailsTestServing
       else
         'tmp/sockets/test_server.sock'
       end
+      FileUtils.mkdir_p(File.dirname(service_uri))
     end
+    "drbunix:" + @@service_uri
   end
   
   SERVICE_URI = self.service_uri
