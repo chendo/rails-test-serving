@@ -3,7 +3,7 @@ Tired of waiting 10 seconds before your tests run? RailsTestServing can make the
 == Usage
 
 1.  Install the gem:
-      gem install Roman2K-rails-test-serving -v '>= 0.1.1' -s http://gems.github.com
+      gem install Roman2K-rails-test-serving -v '>= 0.1.2' -s http://gems.github.com
 
 2.  Insert the following lines at the very top of <tt>test/test_helper.rb</tt>:
       require 'rubygems'
