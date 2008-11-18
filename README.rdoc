@@ -34,4 +34,12 @@ Tired of waiting 10 seconds before your tests run? RailsTestServing can make the
 
 == Credits
 
-Written by {Roman Le Négrate}[http://roman.flucti.com] ({contact}[mailto:roman.lenegrate@gmail.com]). Released under the MIT license: see the +LICENSE+ file.
+Code:
+* {Roman Le Négrate}[http://roman.flucti.com], a.k.a. Roman2K ({contact}[mailto:roman.lenegrate@gmail.com])
+* {Jack Chen}[http://github.com/chendo], a.k.a. chendo
+
+Feedback:
+* Justin Ko
+* {Dr Nic Williams}[http://drnicwilliams.com]
+
+Released under the MIT license: see the +LICENSE+ file.
