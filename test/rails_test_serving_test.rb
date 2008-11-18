@@ -15,23 +15,26 @@ class RailsTestServingTest < Test::Unit::TestCase
     # RAILS_ROOT is the current directory
     setup_service_uri_test do
       FileTest.expects(:file?).with("config/boot.rb").returns true
-      assert_equal "drbunix:test.sock", RailsTestServing.service_uri
+      FileUtils.expects(:mkpath).with("tmp/sockets")
+      assert_equal "drbunix:tmp/sockets/test_server.sock", RailsTestServing.service_uri
     end
     
     # RAILS_ROOT is in the parent directory
     setup_service_uri_test do
       FileTest.stubs(:file?).with("config/boot.rb").returns false
       FileTest.stubs(:file?).with("../config/boot.rb").returns true
-      assert_equal "drbunix:../test.sock", RailsTestServing.service_uri
+      FileUtils.expects(:mkpath).with("../tmp/sockets")
+      assert_equal "drbunix:../tmp/sockets/test_server.sock", RailsTestServing.service_uri
     end
     
     # RAILS_ROOT cannot be determined
     setup_service_uri_test do
       Pathname.stubs(:pwd).returns(Pathname("/foo/bar"))
-      FileTest.stubs(:file?).with("config/boot.rb").returns false
-      FileTest.stubs(:file?).with("../config/boot.rb").returns false
-      FileTest.stubs(:file?).with("../../config/boot.rb").returns false
-      FileTest.stubs(:file?).with("../../../config/boot.rb").returns false
+      FileTest.expects(:file?).with("config/boot.rb").returns false
+      FileTest.expects(:file?).with("../config/boot.rb").returns false
+      FileTest.expects(:file?).with("../../config/boot.rb").returns false
+      FileTest.expects(:file?).with("../../../config/boot.rb").never
+      FileUtils.expects(:mkpath).never
       assert_raise(RuntimeError) { RailsTestServing.service_uri }
     end
   end
@@ -54,21 +57,12 @@ class RailsTestServingTest < Test::Unit::TestCase
   
 private
 
-  def setup_service_uri_test
+  def setup_service_uri_test(wont_mkpath=false)
     old_load_path = $:.dup
     begin
-      old_sock_path = SOCKET_PATH.dup
-      SOCKET_PATH.replace('test.sock')
-      begin
-        begin
-          return yield
-        ensure
-          RailsTestServing.instance_variable_set(:@service_uri, nil)
-        end
-      ensure
-        SOCKET_PATH.replace(old_sock_path)
-      end
+      return yield
     ensure
+      RailsTestServing.instance_variable_set(:@service_uri, nil)
       $:.replace(old_load_path)
     end
   end

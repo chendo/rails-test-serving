@@ -11,23 +11,28 @@ module RailsTestServing
   class ServerUnavailable < StandardError
   end
   
-  SOCKET_PATH = 'tmp/sockets/test_server.sock'
+  SOCKET_PATH = ['tmp', 'sockets', 'test_server.sock']
   
   def self.service_uri
     @service_uri ||= begin
       # Determine RAILS_ROOT
       root, max_depth = Pathname('.'), Pathname.pwd.expand_path.to_s.split(File::SEPARATOR).size
-      until (found = root.join('config', 'boot.rb').file?) || root.to_s.split(File::SEPARATOR).size >= max_depth
+      until root.join('config', 'boot.rb').file?
         root = root.parent
+        if root.to_s.split(File::SEPARATOR).size >= max_depth
+          raise "RAILS_ROOT could not be determined"
+        end
       end
-      found or raise "RAILS_ROOT could not be determined"
       root = root.cleanpath
       
       # Adjust load path
       $: << root << root.join('test')
       
-      path = root.join(SOCKET_PATH)
+      # Ensure socket directory exists
+      path = root.join(*SOCKET_PATH)
       path.dirname.mkpath
+      
+      # URI
       "drbunix:#{path}"
     end
   end
