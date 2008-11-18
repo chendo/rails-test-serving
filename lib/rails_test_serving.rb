@@ -1,3 +1,4 @@
+require 'fileutils'
 require 'thread'
 require 'test/unit'
 require 'drb/unix'
@@ -10,7 +11,28 @@ module RailsTestServing
   class ServerUnavailable < StandardError
   end
   
-  SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
+  #SERVICE_URI = "drbunix:tmp/sockets/test_server.sock"
+  def self.service_uri
+    @@service_uri ||= begin
+      service_uri = if result = $:.inject(nil) do |found_path, path|
+          next found_path if found_path
+          next File.join(path, '..') if File.exists?(File.join(path, '../config/boot.rb'))
+          next File.join(path, '..', '..') if File.exists?(File.join(path, '../../config/boot.rb'))
+          next File.join(path, '..', '..', '..') if File.exists?(File.join(path, '../../../config/boot.rb'))
+        end
+        result = File.expand_path(result)
+        $:.unshift(result)
+        File.join(result, 'tmp/sockets/test_server.sock')
+      else
+        'tmp/sockets/test_server.sock'
+      end
+      FileUtils.mkdir_p(File.dirname(service_uri))
+    end
+    "drbunix:" + @@service_uri
+  end
+  
+  SERVICE_URI = self.service_uri
+  
   
   def self.boot(argv=ARGV)
     if argv.delete('--serve')
@@ -115,7 +137,6 @@ module RailsTestServing
       enable_dependency_tracking
       start_cleaner
       load_framework
-      
       log "** Test server started (##{$$})\n"
     end
     
