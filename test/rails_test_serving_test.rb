@@ -55,16 +55,21 @@ class RailsTestServingTest < Test::Unit::TestCase
 private
 
   def setup_service_uri_test
-    old = SOCKET_PATH
-    SOCKET_PATH.replace('test.sock')
+    old_load_path = $:.dup
     begin
+      old_sock_path = SOCKET_PATH.dup
+      SOCKET_PATH.replace('test.sock')
       begin
-        return yield
+        begin
+          return yield
+        ensure
+          RailsTestServing.instance_variable_set(:@service_uri, nil)
+        end
       ensure
-        RailsTestServing.instance_variable_set(:@service_uri, nil)
+        SOCKET_PATH.replace(old_sock_path)
       end
     ensure
-      SOCKET_PATH.replace(old)
+      $:.replace(old_load_path)
     end
   end
 end
