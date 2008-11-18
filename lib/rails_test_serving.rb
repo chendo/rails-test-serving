@@ -372,6 +372,12 @@ module RailsTestServing
     
     def clean_up_app
       ActionController::Dispatcher.new(StringIO.new).cleanup_application
+      
+      # Reload files that match :reload here instead of in reload_app since the
+      # :reload option is intended to target files that don't change between two
+      # consecutive runs (an external library for example). That way, they are
+      # reloaded in the background instead of slowing down the next run.
+      reload_specified_source_files
     end
     
     def remove_tests

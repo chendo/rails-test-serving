@@ -1,4 +1,5 @@
 require 'rubygems'
+
 require 'test/unit'
 require 'mocha'
 Mocha::Configuration.prevent :stubbing_non_existent_method
