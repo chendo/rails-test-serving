@@ -27,6 +27,7 @@ module RailsTestServing
         'tmp/sockets/test_server.sock'
       end
       FileUtils.mkdir_p(File.dirname(service_uri))
+      service_uri
     end
     "drbunix:" + @@service_uri
   end
@@ -134,6 +135,8 @@ module RailsTestServing
     
     def initialize
       ENV['RAILS_ENV'] = 'test'
+      @options = (defined? TEST_SERVER_OPTIONS) ? TEST_SERVER_OPTIONS : {}
+      @options[:reload] ||= []
       enable_dependency_tracking
       start_cleaner
       load_framework
@@ -172,7 +175,7 @@ module RailsTestServing
     end
     
     def start_cleaner
-      @cleaner = Cleaner.new
+      @cleaner = Cleaner.new(@options)
     end
     
     def load_framework
@@ -316,7 +319,8 @@ module RailsTestServing
                                 ActionController::IntegrationTest
                                 ActionMailer::TestCase )
     
-    def initialize
+    def initialize(options = {})
+      @options = options
       start_worker
     end
     
@@ -360,6 +364,23 @@ module RailsTestServing
     
     def clean_up_app
       ActionController::Dispatcher.new(StringIO.new).cleanup_application
+      if @options[:reload].length > 0
+        matched_files = []
+        
+        # Force a reload by removing matched files from $"
+        $".delete_if do |path|
+          if @options[:reload].any? { |regex| File.expand_path(path).gsub(RAILS_ROOT, '') =~ Regexp.new(regex) }
+            matched_files << path
+            true
+          else
+            false
+          end
+        end
+        matched_files.each do |file|
+          # Expanding the path to prevent files from requiring twice
+          require File.expand_path(file)
+        end
+      end
     end
     
     def remove_tests
