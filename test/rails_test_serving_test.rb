@@ -275,7 +275,7 @@ class RailsTestServing::CleanerTest < Test::Unit::TestCase
       $".replace ["foo.rb", "bar.rb"]
       RailsTestServing.stubs(:options).returns({:reload => [/foo/]})
       
-      Cleaner.any_instance.expects(:require).with("foo").once
+      Cleaner.any_instance.expects(:require).with("foo.rb").once
       Cleaner.new.instance_eval { reload_specified_source_files }
       assert_equal ["bar.rb"], $"
     end
