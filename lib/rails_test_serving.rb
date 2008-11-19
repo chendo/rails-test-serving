@@ -26,7 +26,7 @@ module RailsTestServing
       root = root.cleanpath
       
       # Adjust load path
-      $: << root << root.join('test')
+      $: << root.to_s << root.join('test').to_s
       
       # Ensure socket directory exists
       path = root.join(*SOCKET_PATH)
