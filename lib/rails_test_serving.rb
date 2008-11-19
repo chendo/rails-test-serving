@@ -26,7 +26,7 @@ module RailsTestServing
       root = root.cleanpath
       
       # Adjust load path
-      $: << root << root.join('test')
+      $: << root.to_s << root.join('test').to_s
       
       # Ensure socket directory exists
       path = root.join(*SOCKET_PATH)
@@ -383,8 +383,10 @@ module RailsTestServing
     
     def perform_clean_up
       ActionController::Dispatcher.new(StringIO.new).cleanup_application
+      if defined?(Fixtures) && Fixtures.respond_to?(:reset_cache)
+        Fixtures.reset_cache
+      end
     end
-    
     
     def remove_tests
       TESTCASE_CLASS_NAMES.each do |name|
@@ -394,7 +396,6 @@ module RailsTestServing
     end
     
     def reload_app
-      # reload_specified_source_files
       ActionController::Dispatcher.new(StringIO.new).reload_application
     end
     
