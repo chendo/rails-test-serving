@@ -49,6 +49,7 @@ module RailsTestServing
     @options ||= begin
       options = $test_server_options || {}
       options[:reload] ||= []
+      options[:clean_up] = true if options[:clean_up].nil?
       options
     end
   end
@@ -371,7 +372,7 @@ module RailsTestServing
     end
     
     def clean_up_app
-      ActionController::Dispatcher.new(StringIO.new).cleanup_application
+      perform_clean_up if RailsTestServing.options[:clean_up]
       
       # Reload files that match :reload here instead of in reload_app since the
       # :reload option is intended to target files that don't change between two
@@ -379,6 +380,11 @@ module RailsTestServing
       # reloaded in the background instead of slowing down the next run.
       reload_specified_source_files
     end
+    
+    def perform_clean_up
+      ActionController::Dispatcher.new(StringIO.new).cleanup_application
+    end
+    
     
     def remove_tests
       TESTCASE_CLASS_NAMES.each do |name|
@@ -388,7 +394,7 @@ module RailsTestServing
     end
     
     def reload_app
-      reload_specified_source_files
+      # reload_specified_source_files
       ActionController::Dispatcher.new(StringIO.new).reload_application
     end
     

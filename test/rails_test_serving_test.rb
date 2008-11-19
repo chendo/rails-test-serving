@@ -1,5 +1,4 @@
 require 'rubygems'
-
 require 'test/unit'
 require 'mocha'
 Mocha::Configuration.prevent :stubbing_non_existent_method
@@ -11,34 +10,6 @@ class RailsTestServingTest < Test::Unit::TestCase
   include RailsTestServing
   
 # class
-
-  def test_service_uri
-    # RAILS_ROOT is the current directory
-    setup_service_uri_test do
-      FileTest.expects(:file?).with("config/boot.rb").returns true
-      FileUtils.expects(:mkpath).with("tmp/sockets")
-      assert_equal "drbunix:tmp/sockets/test_server.sock", RailsTestServing.service_uri
-    end
-    
-    # RAILS_ROOT is in the parent directory
-    setup_service_uri_test do
-      FileTest.stubs(:file?).with("config/boot.rb").returns false
-      FileTest.stubs(:file?).with("../config/boot.rb").returns true
-      FileUtils.expects(:mkpath).with("../tmp/sockets")
-      assert_equal "drbunix:../tmp/sockets/test_server.sock", RailsTestServing.service_uri
-    end
-    
-    # RAILS_ROOT cannot be determined
-    setup_service_uri_test do
-      Pathname.stubs(:pwd).returns(Pathname("/foo/bar"))
-      FileTest.expects(:file?).with("config/boot.rb").returns false
-      FileTest.expects(:file?).with("../config/boot.rb").returns false
-      FileTest.expects(:file?).with("../../config/boot.rb").returns false
-      FileTest.expects(:file?).with("../../../config/boot.rb").never
-      FileUtils.expects(:mkpath).never
-      assert_raise(RuntimeError) { RailsTestServing.service_uri }
-    end
-  end
 
   def test_boot
     argv = []
@@ -54,18 +25,6 @@ class RailsTestServingTest < Test::Unit::TestCase
     Server.expects(:start)
     RailsTestServing.boot(argv)
     assert_equal [], argv
-  end
-  
-private
-
-  def setup_service_uri_test(wont_mkpath=false)
-    old_load_path = $:.dup
-    begin
-      return yield
-    ensure
-      RailsTestServing.instance_variable_set(:@service_uri, nil)
-      $:.replace(old_load_path)
-    end
   end
 end
 
@@ -249,46 +208,5 @@ private
     S.any_instance.stubs(:load_framework)
     S.any_instance.stubs(:log)
     S.new
-  end
-end
-
-class RailsTestServing::CleanerTest < Test::Unit::TestCase
-  include RailsTestServing
-  
-# private
-
-  def test_reload_specified_source_files
-    Cleaner.any_instance.stubs(:start_worker)
-    
-    # Empty :reload option
-    preserve_features do
-      $".replace ["foo.rb"]
-      RailsTestServing.stubs(:options).returns({:reload => []})
-      
-      Cleaner.any_instance.expects(:require).never
-      Cleaner.new.instance_eval { reload_specified_source_files }
-      assert_equal ["foo.rb"], $"
-    end
-    
-    # :reload option contains regular expressions
-    preserve_features do
-      $".replace ["foo.rb", "bar.rb"]
-      RailsTestServing.stubs(:options).returns({:reload => [/foo/]})
-      
-      Cleaner.any_instance.expects(:require).with("foo.rb").once
-      Cleaner.new.instance_eval { reload_specified_source_files }
-      assert_equal ["bar.rb"], $"
-    end
-  end
-  
-private
-
-  def preserve_features
-    old = $".dup
-    begin
-      return yield
-    ensure
-      $".replace(old)
-    end
   end
 end
