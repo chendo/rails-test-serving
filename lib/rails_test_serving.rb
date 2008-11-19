@@ -49,7 +49,6 @@ module RailsTestServing
     @options ||= begin
       options = $test_server_options || {}
       options[:reload] ||= []
-      options[:clean_up] = true if options[:clean_up].nil?
       options
     end
   end
@@ -372,20 +371,16 @@ module RailsTestServing
     end
     
     def clean_up_app
-      perform_clean_up if RailsTestServing.options[:clean_up]
+      ActionController::Dispatcher.new(StringIO.new).cleanup_application
+      if defined?(Fixtures) && Fixtures.respond_to?(:reset_cache)
+        Fixtures.reset_cache
+      end
       
       # Reload files that match :reload here instead of in reload_app since the
       # :reload option is intended to target files that don't change between two
       # consecutive runs (an external library for example). That way, they are
       # reloaded in the background instead of slowing down the next run.
       reload_specified_source_files
-    end
-    
-    def perform_clean_up
-      ActionController::Dispatcher.new(StringIO.new).cleanup_application
-      if defined?(Fixtures) && Fixtures.respond_to?(:reset_cache)
-        Fixtures.reset_cache
-      end
     end
     
     def remove_tests

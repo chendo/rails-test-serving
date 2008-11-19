@@ -34,7 +34,6 @@ Tired of waiting 10 seconds before your tests run? RailsTestServing can make the
 
 An option hash can be specified for RailsTestServing to use, by defining <tt>$test_server_options</tt> right before <tt>require 'rails_test_serving'</tt>. It must be a hash with symbol keys. Currently available options are:
 +reload+::    An array of regular expressions (or any object responding to <tt>#===</tt>) matching the name of the files that should be forced to reload right after the regular constant cleanup. Note that the constants these files have defined are not removed before the new +require+.
-+clean_up+::  Whether or not to clean up constants automatically loaded by <code>ActiveSupport::Dependencies</code>.
 
 Example <tt>test_helper.rb</tt> head:
   require 'rubygems'
