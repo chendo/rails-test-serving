@@ -404,7 +404,7 @@ module RailsTestServing
       $".replace($" - to_reload)
       
       to_reload.each do |file|
-        require file.split('.').first  # remove extension, most likely '.rb'
+        require file
       end
     end
   end
