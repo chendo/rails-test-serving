@@ -388,7 +388,6 @@ module RailsTestServing
     end
     
     def reload_app
-      reload_specified_source_files
       ActionController::Dispatcher.new(StringIO.new).reload_application
     end
     
